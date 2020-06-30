@@ -2,7 +2,7 @@ const gulp = require('gulp');
 const gutil = require('gulp-util');
 const debug = require('debug')('slate-tools');
 const argv = require('yargs').argv;
-const runSequence = require('run-sequence');
+// const runSequence = require('run-sequence');
 
 const utils = require('./tasks/includes/utilities.js');
 
@@ -14,22 +14,38 @@ if (argv.environment && argv.environment !== 'undefined') {
 // imports gulp tasks from the `tasks` directory
 require('require-dir')('./tasks');
 
-gulp.task('build', (done) => {
-  runSequence(
-    ['clean'],
-    ['build:js', 'build:vendor-js', 'build:css', 'build:assets', 'build:config', 'build:svg'],
-    ['output:errors'],
-    done,
-  );
+/**
+ * Handles the error summary at the end if there are errors to output.
+ * This task will only be run for the build and zip tasks.
+ */
+gulp.task('output:errors', (done) => {
+  utils.outputErrors();
+  done();
 });
 
-gulp.task('build:zip', (done) => {
-  runSequence(
-    ['clean'],
-    ['build:js', 'build:vendor-js', 'build:css', 'build:assets', 'build:svg'],
-    done,
-  );
-});
+gulp.task('build', gulp.series(
+  'clean',
+  gulp.parallel(
+    'build:js',
+    'build:vendor-js',
+    'build:css',
+    'build:assets',
+    'build:config',
+    'build:svg',
+  ),
+  'output:errors',
+));
+
+gulp.task('build:zip', gulp.series(
+  'clean',
+  gulp.parallel(
+    'build:js',
+    'build:vendor-js',
+    'build:css',
+    'build:assets',
+    'build:svg',
+  ),
+));
 
 /**
  * Runs translation tests on each file using @shopify/theme-lint
@@ -38,9 +54,7 @@ gulp.task('build:zip', (done) => {
  * @memberof slate-cli.tasks
  * @static
  */
-gulp.task('test', (done) => {
-  runSequence('lint:locales', done);
-});
+gulp.task('test', gulp.series('lint:locales'));
 
 /**
  * Does a full clean/rebuild of your theme and creates a `.zip` compatible with
@@ -50,9 +64,7 @@ gulp.task('test', (done) => {
  * @memberof slate-cli.tasks
  * @static
  */
-gulp.task('zip', (done) => {
-  runSequence('build:zip', 'compress', 'output:errors', done);
-});
+gulp.task('zip', gulp.series('build:zip', 'compress', 'output:errors'));
 
 /**
  * Simple wrapper around src & dist watchers
@@ -63,9 +75,7 @@ gulp.task('zip', (done) => {
  * @memberof slate-cli.tasks.watch
  * @static
  */
-gulp.task('watch', () => {
-  runSequence('validate:id', 'build:config', defineWatchTasks());
-});
+gulp.task('watch', gulp.series('validate:id', 'build:config', defineWatchTasks()));
 
 function defineWatchTasks() {
   const tasks = ['watch:src', 'watch:dist', 'watch:dist-config'];
@@ -75,9 +85,8 @@ function defineWatchTasks() {
     tasks.push('deploy:sync-reload');
   }
 
-  return tasks;
+  return gulp.parallel(...tasks);
 }
-
 
 /**
  * Does a full (re)build followed by a full deploy, cleaning existing files on
@@ -90,9 +99,10 @@ function defineWatchTasks() {
  * @memberof slate-cli.tasks.deploy
  * @static
  */
-gulp.task('deploy', (done) => {
-  runSequence('validate:id', 'build', 'deploy:replace', done);
-});
+gulp.task('deploy', gulp.series('validate:id', 'build', 'deploy:replace'));
+// gulp.task('deploy', (done) => {
+//   runSequence('validate:id', 'build', 'deploy:replace', done);
+// });
 
 /**
  * Creates a zip of your theme and opens the store from `config.yml` to manually
@@ -102,9 +112,10 @@ gulp.task('deploy', (done) => {
  * @memberof slate-cli.tasks.deploy
  * @static
  */
-gulp.task('deploy:manual', (done) => {
-  runSequence('zip', 'open:admin', 'open:zip', done);
-});
+gulp.task('deploy:manual', gulp.series('zip', 'open:admin', 'open:zip'));
+// gulp.task('deploy:manual', (done) => {
+//   runSequence('zip', 'open:admin', 'open:zip', done);
+// });
 
 /**
  * Default function.  Starts watchers & (optionally) syncs browsers for
@@ -115,14 +126,7 @@ gulp.task('deploy:manual', (done) => {
  * @memberof slate-cli.tasks
  * @static
  */
-gulp.task('default', (done) => {
-  runSequence('deploy', 'watch', done);
-});
-
-/**
- * Handles the error summary at the end if there are errors to output.
- * This task will only be run for the build and zip tasks.
- */
-gulp.task('output:errors', () => {
-  utils.outputErrors();
-});
+gulp.task('default', gulp.series('deploy', 'watch'));
+// gulp.task('default', (done) => {
+//   runSequence('deploy', 'watch', done);
+// });

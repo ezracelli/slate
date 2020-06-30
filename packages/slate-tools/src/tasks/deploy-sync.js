@@ -75,10 +75,10 @@ gulp.task('deploy:sync-init', () => {
  * @memberof slate-cli.tasks.watch
  * @static
  */
-gulp.task('deploy:sync-reload', ['deploy:sync-init'], () => {
-  gulp.watch(config.tkConfig, ['deploy:sync-init']);
+gulp.task('deploy:sync-reload', gulp.series('deploy:sync-init', () => {
+  gulp.watch(config.tkConfig, gulp.series('deploy:sync-init'));
   gulp.watch(config.deployLog, () => {
     messages.logTransferDone();
     browserSync.reload();
   });
-});
+}));

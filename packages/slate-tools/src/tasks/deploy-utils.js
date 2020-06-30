@@ -10,7 +10,6 @@ const themekit = require('@shopify/themekit');
 
 const config = require('./includes/config.js');
 const messages = require('./includes/messages.js');
-const utils = require('./includes/utilities.js');
 
 /**
  * simple promise factory wrapper for deploys
@@ -19,21 +18,13 @@ const utils = require('./includes/utilities.js');
  * @private
  */
 function deploy(env) {
-  return new Promise((resolve, reject) => {
-    debug(`themekit cwd to: ${config.dist.root}`);
+  debug(`themekit cwd to: ${config.dist.root}`);
 
-    themekit.command({
-      args: ['replace', '--env', env],
-      cwd: config.dist.root,
-    }, (err) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve();
-      }
-    });
+  return themekit.command('deploy', {env, nodelete: true}, {
+    cwd: config.dist.root,
   }).catch((err) => {
-    messages.logTransferFailed(err);
+    const message = messages.logTransferFailed(err);
+    return Promise.reject(new Error(message));
   });
 }
 
@@ -53,7 +44,8 @@ function validateId(settings) {
     const id = Number(settings.themeId);
 
     if (isNaN(id)) {
-      reject(settings);
+      const message = messages.invalidThemeId(settings.themeId, settings.environment);
+      reject(new TypeError(message));
     } else {
       resolve();
     }
@@ -66,46 +58,37 @@ function validateId(settings) {
  * @memberof slate-cli.tasks.watch, slate-cli.tasks.deploy
  * @private
  */
-gulp.task('validate:id', () => {
+gulp.task('validate:id', (cb) => {
   let file;
 
   try {
     file = fs.readFileSync(config.tkConfig, 'utf8');
   } catch (err) {
-    if (err.code !== 'ENOENT') {
-      throw new Error(err);
+    if (err.code === 'ENOENT') {
+      messages.configError();
     }
 
-    messages.configError();
-
-    return process.exit(2);
+    cb(err);
+    return;
   }
 
   const tkConfig = yaml.safeLoad(file);
-  let envObj;
 
   const environments = config.environment.split(/\s*,\s*|\s+/);
-  const promises = [];
 
-  environments.forEach((environment) => {
-    function factory() {
-      envObj = tkConfig[environment];
-      const envSettings = {
-        themeId: envObj.theme_id,
-        environment,
-      };
+  Promise.each(environments, (environment) => {
+    const envObj = tkConfig[environment];
+    const envSettings = {
+      themeId: envObj.theme_id,
+      environment,
+    };
 
-      return validateId(envSettings);
-    }
-    promises.push(factory);
-  });
+    return validateId(envSettings);
+  })
+    .then(() => cb())
+    .catch(cb);
 
-  return utils.promiseSeries(promises)
-    .catch((result) => {
-      // stop process to prevent deploy defaulting to published theme
-      messages.invalidThemeId(result.themeId, result.environment);
-      return process.exit(2);
-    });
+  cb();
 });
 
 /**
@@ -115,25 +98,17 @@ gulp.task('validate:id', () => {
  * @memberof slate-cli.tasks.deploy
  * @static
  */
-gulp.task('deploy:replace', () => {
+gulp.task('deploy:replace', (cb) => {
   debug(`environments ${config.environment}`);
 
   const environments = config.environment.split(/\s*,\s*|\s+/);
-  const promises = [];
 
-  environments.forEach((environment) => {
-    function factory() {
-      messages.deployTo(environment);
-      return deploy(environment);
-    }
-
-    promises.push(factory);
-  });
-
-  return utils.promiseSeries(promises)
+  Promise.each(environments, (environment) => deploy(environment))
     .then(() => {
-      return messages.allDeploysComplete();
-    });
+      messages.allDeploysComplete();
+      return cb();
+    })
+    .catch(cb);
 });
 
 /**
@@ -149,17 +124,12 @@ gulp.task('open:admin', () => {
   let envObj;
 
   const environments = config.environment.split(/\s*,\s*|\s+/);
-  const promises = [];
-
-  environments.forEach((environment) => {
-    function factory() {
-      envObj = tkConfig[environment];
-      return open(`https://${envObj.store}/admin/themes`);
-    }
-    promises.push(factory);
+  const promises = environments.map((environment) => {
+    envObj = tkConfig[environment];
+    return open(`https://${envObj.store}/admin/themes`);
   });
 
-  return utils.promiseSeries(promises);
+  return Promise.all(promises);
 });
 
 /**

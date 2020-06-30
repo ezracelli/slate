@@ -30,7 +30,7 @@ function processVendorJs() {
 }
 
 gulp.task('build:js', () => {
-  processThemeJs();
+  return processThemeJs();
 });
 
 gulp.task('watch:js', () => {
@@ -42,7 +42,7 @@ gulp.task('watch:js', () => {
 });
 
 gulp.task('build:vendor-js', () => {
-  processVendorJs();
+  return processVendorJs();
 });
 
 gulp.task('watch:vendor-js', () => {

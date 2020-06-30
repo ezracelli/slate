@@ -7,7 +7,7 @@
   "author": "Shopify Inc.",
   "dependencies": {
     "@shopify/theme-lint": "1.0.3",
-    "@shopify/themekit": "0.6.6",
+    "@shopify/themekit": "1.1.4",
     "bluebird": "3.4.6",
     "browser-sync": "2.18.2",
     "chokidar": "1.6.1",
@@ -15,7 +15,7 @@
     "debug": "2.3.3",
     "del": "2.2.2",
     "find-root": "1.0.0",
-    "gulp": "3.9.1",
+    "gulp": "4.0.2",
     "gulp-cheerio": "0.6.2",
     "gulp-cssimport": "5.0.0",
     "gulp-ext-replace": "0.3.0",

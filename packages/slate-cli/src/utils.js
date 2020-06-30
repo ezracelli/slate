@@ -1,6 +1,6 @@
-import {createReadStream, createWriteStream, rename, unlinkSync, readFileSync, writeFileSync, existsSync} from 'fs';
+import {createWriteStream, rename, unlinkSync, readFileSync, writeFileSync, existsSync} from 'fs';
 import {join, normalize} from 'path';
-import {Extract} from 'unzip2';
+import extract from 'extract-zip';
 import {get} from 'https';
 import spawn from 'cross-spawn';
 import mv from 'mv';
@@ -41,22 +41,7 @@ export function downloadFromUrl(source, target) {
  * @param {string} target - The path to the unzip destination.
  */
 export function unzip(source, target) {
-  return new Promise((resolve, reject) => {
-    const zipFile = createReadStream(source);
-
-    zipFile.on('error', (err) => {
-      reject(err);
-    });
-
-    zipFile.on('close', () => {
-      unlinkSync(source);
-      resolve(target);
-    });
-
-    zipFile.pipe(Extract({
-      path: target,
-    }));
-  });
+  return extract(source, {dir: target});
 }
 
 /**

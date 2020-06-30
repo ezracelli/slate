@@ -27,7 +27,7 @@ function checkDeployStatus() {
   }
 
   if (cache.change.length) {
-    deploy('upload', cache.change, environment);
+    deploy('deploy', cache.change, environment);
     cache.change = [];
   } else if (cache.unlink.length) {
     deploy('remove', cache.unlink, environment);
@@ -52,8 +52,7 @@ function deploy(cmd, files, env) {
   return new Promise((resolve, reject) => {
     debug(`themekit cwd to: ${config.dist.root}`);
 
-    themekit.command({
-      args: [cmd, '--env', env].concat(files),
+    themekit.command(cmd, {env, files}, {
       cwd: config.dist.root,
     }, (err) => {
       if (err) {
@@ -84,14 +83,14 @@ function deploy(cmd, files, env) {
  * @memberof slate-cli.tasks.watch
  * @static
  */
-gulp.task('watch:src', [
+gulp.task('watch:src', gulp.parallel(
   'watch:assets',
   'watch:config',
   'watch:svg',
   'watch:css',
   'watch:js',
   'watch:vendor-js',
-]);
+));
 
 /**
  * Watches for changes in the `./dist` folder and passes event data to the

@@ -6,7 +6,7 @@ import {yellow, red} from 'chalk';
 import figures from 'figures';
 import findRoot from 'find-root';
 import updateNotifier from 'update-notifier';
-import program from '@shopify/commander';
+import program from 'commander';
 import {hasDependency} from './utils';
 
 /**
